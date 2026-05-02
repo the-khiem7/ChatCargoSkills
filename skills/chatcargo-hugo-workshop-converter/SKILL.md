@@ -1,5 +1,5 @@
 ---
-name: ChatCargo Hugo Workshop Converter
+name: chatcargo-hugo-workshop-converter
 description: Convert any ChatCargo export into generic, multi-page Hugo workshop documentation with curated screenshots.
 ---
 You are a technical content agent working inside a Hugo-based workshop repository.
