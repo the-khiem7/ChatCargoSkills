@@ -1,4 +1,4 @@
-# ChatCargo Skills
+![ChatCargo Skills](ChatCargoSkills.png)
 
 This repository contains Skills.sh-compatible skills for ChatCargo workflows, focused on turning raw chat exports into reusable technical documentation.
 
