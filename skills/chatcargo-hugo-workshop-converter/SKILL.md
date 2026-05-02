@@ -1,81 +1,107 @@
-﻿---
-name: ChatCargo Hugo Workshop Sink
-description: Convert ChatCargo exports into polished, reproducible Hugo workshop documentation.
 ---
+name: ChatCargo Hugo Workshop Converter
+description: Convert any ChatCargo export into generic, multi-page Hugo workshop documentation with curated screenshots.
+---
+You are a technical content agent working inside a Hugo-based workshop repository.
 
-You are a technical content agent working inside a Hugo-based AWS Workshop repository.
+## Core Purpose
 
-## Context
+Convert a raw ChatCargo conversation export into polished, reproducible Hugo workshop documentation.
 
-I have just completed a technical task by interacting with ChatGPT step by step.
+The final documentation must transform the raw Q&A conversation into structured tutorial content. It must teach the workflow directly, not preserve the original chat format.
 
-The raw exported conversation is located at:
+The output must be detailed enough that the target readers can reproduce the task without asking ChatGPT step by step.
 
-@raw/manhattan-dataways-redshift-spectrum-query-setup/
+## Path Resolution and Task Inputs
 
-This export was created by ChatCargo and contains:
+Resolve all paths and task-specific values from the user's prompt before reading or writing content.
 
-- the full ChatGPT conversation
-- my questions
-- ChatGPT answers
-- screenshots/images I uploaded during the process
-- markdown references to exported image assets
+The user may provide paths using `@path/` mentions. Treat those mentions as task inputs, not literal Markdown text to preserve.
 
-The task in the conversation is about setting up and using Amazon Redshift / Redshift Spectrum in the Manhattan DataWays AWS workshop context.
+Required or inferred inputs:
 
-The final goal is to convert this raw conversation into polished Hugo workshop documentation under:
+- `RAW_EXPORT_DIR`: ChatCargo export directory, for example `raw/my-export/`.
+- `OUTPUT_CONTENT_DIR`: target Hugo content directory, for example `content/Workshop/`.
+- `IMAGE_OUTPUT_ROOT`: static image root, default `static/images/`.
+- `PUBLIC_IMAGE_PREFIX`: Markdown image URL prefix, default `/images/`.
+- `WORKSHOP_SLUG`: output folder slug, inferred from the topic or raw export folder name when not provided.
+- `OUTPUT_ARTICLE_DIR`: `OUTPUT_CONTENT_DIR / WORKSHOP_SLUG`, unless the user explicitly requests writing directly into `OUTPUT_CONTENT_DIR`.
+- `IMAGE_OUTPUT_DIR`: `IMAGE_OUTPUT_ROOT / WORKSHOP_SLUG`, unless the user explicitly provides a different image folder.
+- `PRIMARY_LANGUAGE`: default `vi` when the source conversation is Vietnamese or when the user asks for Vietnamese first.
+- `SECONDARY_LANGUAGE`: default `en` when bilingual output is requested or when the repository convention includes English and Vietnamese.
+- `TOPIC`: infer from the raw conversation; do not hardcode a topic from examples.
 
-@content/Workshop/
+If the user provides paths in the prompt, those paths override defaults.
 
-The target readers are my colleagues. They should be able to follow the final workshop content and reproduce the task without needing to ask ChatGPT step by step like I did.
+Example prompt:
 
-## Important Repository Conventions
+```txt
+Read @raw/my-export/ and convert it into a multi-page Hugo workshop under @content/Workshop/.
+Keep technical detail, select high-value screenshots, and insert images using /images/... paths.
+```
+
+Resolve it as:
+
+```txt
+RAW_EXPORT_DIR = raw/my-export/
+OUTPUT_CONTENT_DIR = content/Workshop/
+PUBLIC_IMAGE_PREFIX = /images/
+IMAGE_OUTPUT_ROOT = static/images/
+WORKSHOP_SLUG = my-export, unless the raw conversation clearly implies a better topic slug
+OUTPUT_ARTICLE_DIR = content/Workshop/<WORKSHOP_SLUG>/
+IMAGE_OUTPUT_DIR = static/images/<WORKSHOP_SLUG>/
+```
+
+Never scatter path decisions across later instructions. Every generated content file, copied image, and Markdown image URL must derive from the resolved values above.
+
+Do not use any hardcoded path, topic, cloud service, or article structure from examples as actual task values unless the user explicitly provides them.
+
+## Hugo Repository Conventions
 
 Follow the existing Hugo repository conventions:
 
 - Published content must be written under `content/`.
-- Workshop articles should be placed under `content/Workshop/`.
+- Workshop articles usually belong under `content/Workshop/`, unless the user provides another content directory.
 - Raw exported material under `raw/` is only internal input and must not be treated as published content.
-- Static images used by articles should be copied into `static/images/`.
-- Markdown image paths should use root-relative paths such as `/images/...`.
+- Static images used by articles should be copied into `static/images/` or the resolved `IMAGE_OUTPUT_ROOT`.
+- Markdown image paths should use root-relative paths such as `/images/<WORKSHOP_SLUG>/<image-name>.png`.
 - Use Markdown-first content.
 - Use front matter consistent with the existing Hugo site style.
 - If creating multilingual content:
-
-  - English page: use `.md` or `.en.md`
-  - Vietnamese page: use `.vi.md`
+  - English page: use `.md` or `.en.md`, following existing repository convention.
+  - Vietnamese page: use `.vi.md`.
   - Keep the same basename for translated versions.
 - Do not edit `public/`.
 - Do not edit the Hugo theme directly unless absolutely required.
-- Do not reference images directly from `raw/` in published content.
+- Do not reference images directly from `RAW_EXPORT_DIR` in published content.
 
 ## Source Material Characteristics
 
 The raw ChatGPT conversation is noisy.
 
-During the task, I uploaded many screenshots. Some screenshots are repetitive because my workflow was:
+During the task, the user may have uploaded many screenshots. Some screenshots are repetitive because the workflow may have been:
 
-1. I encountered a new screen or step.
-2. I uploaded a blank or pre-action screenshot to ask ChatGPT what to do.
-3. ChatGPT advised me.
-4. I applied the advice.
-5. I uploaded another screenshot showing the updated screen to confirm that it was correct.
-6. Then I moved to the next step.
+1. The user encountered a new screen or step.
+2. The user uploaded a blank or pre-action screenshot to ask what to do.
+3. ChatGPT advised the user.
+4. The user applied the advice.
+5. The user uploaded another screenshot showing the updated screen to confirm it was correct.
+6. Then the user moved to the next step.
 
 Therefore, not every screenshot should be used in the final article.
 
-You must carefully infer which screenshot is the best representative image for each step.
+Carefully infer which screenshot is the best representative image for each step.
 
 Prefer screenshots that show:
 
 - the final configured state
 - the successful result
-- the exact AWS Console screen the reader needs to recognize
-- meaningful errors or warnings that are discussed in the article
-- important decision points in the AWS Console
-- successful Query Editor v2 connection
-- SQL execution results
-- external schema/table verification
+- the exact console, UI, CLI output, notebook, or application screen the reader needs to recognize
+- meaningful errors or warnings discussed in the article
+- important decision points
+- successful connection or authentication states
+- command, query, script, or workflow execution results
+- verification output
 - wrong paths that are useful for troubleshooting
 
 Avoid screenshots that are:
@@ -84,14 +110,12 @@ Avoid screenshots that are:
 - duplicate confirmations
 - transitional states with no instructional value
 - screenshots that only repeat the same information without adding clarity
-- screenshots that were only used to ask ChatGPT whether the screen was correct
+- screenshots that were only used to ask whether the screen was correct
 - screenshots unrelated to the specific article section
 
 ## Main Objective
 
 Read the raw exported conversation carefully, understand the actual task flow, then produce polished Hugo workshop documentation.
-
-The final documentation must transform the raw Q&A conversation into structured tutorial content.
 
 The final content should teach the workflow directly, not preserve the original chat format.
 
@@ -118,15 +142,15 @@ A single article is allowed only if the final content remains detailed, readable
 
 Prefer multiple focused articles when the raw conversation contains:
 
-- many AWS console screens
+- many UI or console screens
 - multiple decision points
 - multiple troubleshooting branches
 - repeated screenshots that need careful selection
-- several distinct AWS services or concepts
-- setup steps plus query/testing steps
-- cost/control explanations
+- several distinct services, tools, systems, or concepts
+- setup steps plus execution/testing steps
+- cost, security, permission, cleanup, or operational explanations
 - mistakes or wrong paths that should be documented separately
-- commands or SQL blocks that deserve their own explanation
+- commands, SQL, code, configuration, or scripts that deserve their own explanation
 
 The agent must not summarize the whole journey into a high-level overview.
 
@@ -139,81 +163,62 @@ A continuous journey can still be documented as multiple focused workshop pages.
 Use this rule:
 
 ```txt
-
 If one article would require removing details, compressing explanations, skipping screenshots, or merging unrelated steps, split into multiple articles.
-
 ```
 
 Also split when:
 
 ```txt
-
 A reader would benefit from completing one stage, verifying it, then moving to the next page.
-
 ```
 
-Examples of stages that usually deserve separate pages:
+Generic stage types that often deserve separate pages:
 
-* Existing Glue/S3 pipeline context
-* Redshift Serverless setup
-* Namespace, workgroup, IAM role, and capacity explanation
-* Query Editor v2 connection
-* External schema creation
-* Redshift Spectrum query testing
-* Troubleshooting and wrong paths
-* Cost and cleanup notes
+- starting context and prerequisites
+- environment or account setup
+- service, tool, application, or dependency setup
+- core concepts needed before execution
+- configuration and permissions
+- connection, login, or access verification
+- first successful command, query, run, or test
+- main workflow execution
+- validation and result inspection
+- troubleshooting and wrong paths
+- cost control, cleanup, rollback, or next steps
 
-## Recommended Multi-page Structure
+Only include stages that exist in the source conversation. Do not invent cloud services, product names, resource names, or troubleshooting branches.
 
-For this Redshift Spectrum workflow, prefer a multi-page workshop structure unless there is a strong reason not to.
+## Structure Derivation Rules
 
-Suggested structure:
+Derive the final page structure from the actual workflow stages in the raw conversation.
+
+Prefer page names like:
 
 ```txt
-
-content/Workshop/manhattan-dataways-redshift-spectrum/
-
+OUTPUT_ARTICLE_DIR/
 ├── _index.vi.md
-
 ├── _index.md
-
-├── 01-existing-glue-s3-context.vi.md
-
-├── 01-existing-glue-s3-context.md
-
-├── 02-create-redshift-serverless.vi.md
-
-├── 02-create-redshift-serverless.md
-
-├── 03-redshift-core-concepts.vi.md
-
-├── 03-redshift-core-concepts.md
-
-├── 04-connect-query-editor-v2.vi.md
-
-├── 04-connect-query-editor-v2.md
-
-├── 05-create-external-schema.vi.md
-
-├── 05-create-external-schema.md
-
-├── 06-query-glue-catalog-with-redshift-spectrum.vi.md
-
-├── 06-query-glue-catalog-with-redshift-spectrum.md
-
-├── 07-troubleshooting-and-wrong-paths.vi.md
-
-├── 07-troubleshooting-and-wrong-paths.md
-
-├── 08-cost-control-and-cleanup.vi.md
-
-└── 08-cost-control-and-cleanup.md
-
+├── 01-<starting-context>.vi.md
+├── 01-<starting-context>.md
+├── 02-<setup-or-configuration>.vi.md
+├── 02-<setup-or-configuration>.md
+├── 03-<core-concepts>.vi.md
+├── 03-<core-concepts>.md
+├── 04-<execution-or-testing>.vi.md
+├── 04-<execution-or-testing>.md
+├── 05-<verification>.vi.md
+├── 05-<verification>.md
+├── 06-<troubleshooting>.vi.md
+├── 06-<troubleshooting>.md
+├── 07-<cost-control-or-cleanup>.vi.md
+└── 07-<cost-control-or-cleanup>.md
 ```
 
-This structure can be adjusted based on the actual conversation, but the default direction should be to preserve detail through multiple focused pages rather than compressing everything into one article.
+This is a naming pattern, not a required file list.
 
-If you choose a different structure, it must still preserve the same level of detail.
+Adjust the number of pages, basenames, and section names based on the actual conversation. Preserve detail through multiple focused pages rather than compressing everything into one article.
+
+If choosing a different structure, it must still preserve the same level of detail.
 
 ## Required Workflow
 
@@ -221,45 +226,43 @@ If you choose a different structure, it must still preserve the same level of de
 
 First, read the entire raw export to understand:
 
-* what the original task was
-* what AWS services were involved
-* what resources already existed before the Redshift task
-* what decisions were made
-* what mistakes or detours happened
-* what the final correct workflow became
-* which screenshots were useful
-* which screenshots were redundant or only transitional
+- what the original task was
+- what tools, services, systems, resources, or repositories were involved
+- what resources already existed before the task
+- what decisions were made
+- what mistakes or detours happened
+- what the final correct workflow became
+- which screenshots were useful
+- which screenshots were redundant or only transitional
+- what exact names, paths, regions, commands, SQL statements, configuration values, IDs, and URLs appeared
 
 Do not start writing the final articles before understanding the full conversation.
 
-### Phase 2: Inspect Exported Assets by the conversation
+### Phase 2: Inspect Exported Assets Through the Conversation
 
-Place at the `assets` inside the raw directory @raw/manhattan-dataways-redshift-spectrum-query-setup/assets
+Inspect the image assets referenced by the raw content from the ChatCargo export.
 
-Inspect the image assets referenced by the raw content from ChatCargo export.
+The assets usually live under:
 
-You could see the picture but there are an change that the exported folder have massive amount of assets file so finding the meaning of picture from the conversation are more effective
+```txt
+RAW_EXPORT_DIR/assets/
+```
+
+The exported folder may contain many asset files. Use the conversation context to understand what each picture means before selecting images.
 
 Create a mapping table internally before writing:
 
 ```txt
-
-raw asset path → what it shows → useful or skipped → target article/section
-
+raw asset path -> what it shows -> useful or skipped -> target article/section
 ```
 
 For example:
 
 ```txt
-
-raw/.../assets/010.png
-
-→ Redshift Serverless workgroup available
-
-→ useful
-
-→ 02-create-redshift-serverless.vi.md / Verify workgroup status
-
+RAW_EXPORT_DIR/assets/010.png
+-> final configured state for a key setup screen
+-> useful
+-> 02-setup.vi.md / Verify setup status
 ```
 
 Do not insert images yet.
@@ -270,34 +273,31 @@ First understand what each useful image represents.
 
 Break the long conversation into smaller workflow chunks.
 
-Think in terms of pipeline/task steps, not chat turns.
+Think in terms of task steps, not chat turns.
 
 Example chunk types:
 
-* starting context and existing Glue/S3 pipeline
-* creating Redshift Serverless namespace and workgroup
-* understanding namespace vs workgroup
-* configuring IAM role
-* configuring Redshift Serverless capacity/RPU
-* understanding Redshift Serverless free trial and cost controls
-* connecting with Query Editor v2
-* creating external schema for Glue Data Catalog
-* querying external tables through Redshift Spectrum
-* handling mistakes such as using “Load data” instead of external schema
-* verifying external schema and external tables
-* troubleshooting missing Glue tables
-* cleanup or cost-control notes
+- starting context and existing resources
+- prerequisites and assumptions
+- creating or configuring a service, project, app, dataset, workflow, or environment
+- understanding concepts that affected decisions
+- configuring permissions, roles, credentials, paths, or connections
+- running commands, queries, scripts, or UI operations
+- verifying outputs
+- handling mistakes, wrong pages, wrong commands, wrong paths, or misleading UI flows
+- troubleshooting missing data, failed commands, access issues, or unexpected output
+- cleanup, cost control, rollback, publishing, or handoff notes
 
 For each chunk, identify:
 
-* the purpose of the step
-* the AWS console location
-* the important decision points
-* the SQL commands used
-* the screenshots relevant to that step
-* repeated or redundant screenshots that should be ignored
-* verification steps
-* possible errors or wrong paths
+- the purpose of the step
+- the UI location, command context, repository location, or service area
+- important decision points
+- commands, SQL, code, configuration, or scripts used
+- screenshots relevant to that step
+- repeated or redundant screenshots that should be ignored
+- verification steps
+- possible errors or wrong paths
 
 ### Phase 4: Process Each Chunk
 
@@ -332,55 +332,31 @@ The structure should help readers move through the workflow step by step.
 For every selected screenshot:
 
 1. Copy the image from the raw ChatCargo export assets folder.
-2. Place it under an organized folder inside `static/images/`.
-
-Use a folder such as:
-
-```txt
-
-static/images/manhattan-dataways/redshift-spectrum/
-
-```
-
-Rename selected images meaningfully.
+2. Place it under `IMAGE_OUTPUT_DIR`.
+3. Rename it meaningfully.
 
 Do not keep names like:
 
 ```txt
-
 001.png
-
 002.png
-
 003.png
-
 ```
 
-Use names like:
+Use descriptive names like:
 
 ```txt
-
-01-existing-glue-stack-overview.png
-
-02-redshift-serverless-custom-settings.png
-
-03-redshift-capacity-rpu.png
-
-04-redshift-iam-role-default-state.png
-
-05-redshift-workgroup-available.png
-
-06-query-editor-v2-connection.png
-
-07-current-database-query-success.png
-
-08-create-external-schema-success.png
-
-09-external-schema-verification.png
-
-10-load-data-wrong-path.png
-
+01-existing-project-overview.png
+02-service-custom-settings.png
+03-permission-role-selection.png
+04-connection-success.png
+05-test-command-success.png
+06-result-verification.png
+07-wrong-path-troubleshooting.png
+08-cleanup-confirmation.png
 ```
+
+Use names that match the actual topic. Do not use example service names unless the source conversation uses them.
 
 Do not copy every image.
 
@@ -390,12 +366,12 @@ Only copy selected images that will be used in published articles.
 
 Insert selected screenshots into the relevant article sections.
 
-Use root-relative Markdown image paths:
+Use root-relative Markdown image paths derived from `PUBLIC_IMAGE_PREFIX`.
+
+Example:
 
 ```md
-
-![Redshift Serverless workgroup is available](/images/manhattan-dataways/redshift-spectrum/05-redshift-workgroup-available.png)
-
+![Configured service is ready](/images/my-workshop/04-service-ready.png)
 ```
 
 Place images immediately after the paragraph, instruction, or verification step they support.
@@ -403,119 +379,114 @@ Place images immediately after the paragraph, instruction, or verification step 
 Good placement:
 
 ```md
+After saving the configuration, wait until the status becomes `Available`.
 
-After saving the configuration, wait until the workgroup status becomes `Available`.
-
-
-![Redshift Serverless workgroup is available](/images/manhattan-dataways/redshift-spectrum/05-redshift-workgroup-available.png)
-
+![Service status is available](/images/my-workshop/04-service-status-available.png)
 ```
 
 Bad placement:
 
 ```md
-
 # Screenshots
 
-
 ![image1](...)
-
 ![image2](...)
-
 ![image3](...)
-
 ```
 
 Do not create an image dump or gallery unless the article explicitly needs it.
 
 Every inserted image must have:
 
-* meaningful alt text
-* correct root-relative path
-* clear instructional purpose
-* corresponding file under `static/images/...`
+- meaningful alt text
+- correct root-relative path
+- clear instructional purpose
+- corresponding file under `IMAGE_OUTPUT_DIR`
 
-### Phase 8: Write Vietnamese First
+### Phase 8: Write the Primary Language First
 
-Because the source conversation is in Vietnamese, first write the Vietnamese version.
+If the source conversation is Vietnamese, first write the Vietnamese version.
 
 The Vietnamese version should be natural, technical, and clear.
 
 Do not translate too early.
 
-Do all reasoning, cleanup, screenshot selection, structure design, and image placement in Vietnamese first.
+Do all reasoning, cleanup, screenshot selection, structure design, and image placement in the primary language first.
 
-### Phase 9: Create English Version After Vietnamese Is Stable
+If the source conversation is not Vietnamese and the user does not request Vietnamese, use the source language or the repository's existing primary language.
 
-After the Vietnamese article(s) are complete and coherent, create the English version.
+### Phase 9: Create Secondary Language Version After Primary Is Stable
 
-The English version should be a proper technical translation, not a literal word-by-word translation.
+After the primary-language article(s) are complete and coherent, create the secondary-language version when requested or when repository convention requires bilingual content.
+
+The secondary-language version should be a proper technical translation, not a literal word-by-word translation.
 
 Preserve:
 
-* structure
-* commands
-* screenshots
-* image paths
-* warnings
-* AWS resource names
-* SQL statements
-* folder paths
-* technical explanations
+- structure
+- commands
+- screenshots
+- image paths
+- warnings
+- resource names
+- SQL statements
+- code blocks
+- configuration values
+- folder paths
+- technical explanations
 
-Both Vietnamese and English versions should reference the same selected images unless there is a clear reason not to.
+Both language versions should reference the same selected images unless there is a clear reason not to.
 
 ## Writing Style
 
-Write as a practical AWS workshop guide.
+Write as a practical workshop guide.
 
 Tone:
 
-* clear
-* direct
-* instructional
-* friendly but professional
-* suitable for colleagues who want to reproduce the task
+- clear
+- direct
+- instructional
+- friendly but professional
+- suitable for colleagues who want to reproduce the task
 
 Avoid:
 
-* raw ChatGPT Q&A style
-* unnecessary jokes
-* excessive storytelling
-* vague instructions
-* dumping every screenshot
-* copying repeated chat messages
-* over-compressing multiple steps into abstract explanations
-* turning the tutorial into a short summary
+- raw ChatGPT Q&A style
+- unnecessary jokes
+- excessive storytelling
+- vague instructions
+- dumping every screenshot
+- copying repeated chat messages
+- over-compressing multiple steps into abstract explanations
+- turning the tutorial into a short summary
 
 Use:
 
-* headings
-* short paragraphs
-* numbered steps
-* tables where helpful
-* command blocks for SQL
-* callout-style warnings where needed
-* screenshot references near the step they explain
-* verification sections after important steps
-* troubleshooting notes when the raw conversation encountered confusion
+- headings
+- short paragraphs
+- numbered steps
+- tables where helpful
+- command blocks for SQL, shell commands, code, configuration, or scripts
+- callout-style warnings where useful
+- screenshot references near the step they explain
+- verification sections after important steps
+- troubleshooting notes when the raw conversation encountered confusion
 
 ## Required Technical Accuracy
 
-Preserve exact resource names when they appear in the raw conversation, such as:
+Preserve exact values when they appear in the raw conversation, such as:
 
-* Redshift namespace
-* Redshift workgroup
-* Glue database names
-* Glue table names
-* S3 bucket names
-* IAM role ARN if relevant
-* AWS region
-* SQL queries
-* Redshift Serverless capacity/RPU setting
-* Query Editor v2 connection method
+- product, service, project, repository, workflow, or dataset names
+- resource names and IDs
+- account, workspace, namespace, database, bucket, folder, or table names
+- IAM roles, permission names, credentials references, or ARNs when relevant
+- regions, environments, runtimes, versions, or capacity settings
+- commands, SQL queries, scripts, code snippets, and config blocks
+- connection methods
+- UI labels and navigation paths
+- error messages and warning text
 
-Do not invent missing AWS resource names.
+Do not invent missing values.
 
 If something is uncertain, mention it as a note or verification step.
 
@@ -527,125 +498,114 @@ When multiple screenshots describe the same step:
 2. Prefer the screenshot showing the final successful state.
 3. Prefer screenshots that contain unique UI information.
 4. Avoid blank or pre-action screenshots unless they are needed to show where a reader starts.
-5. Avoid using both “before” and “after” images unless the contrast is educational.
+5. Avoid using both "before" and "after" images unless the contrast is educational.
 6. Keep image count reasonable, but do not remove screenshots that are important for reproducibility.
 7. Place screenshots close to the step they support.
 
-Minimum expected screenshot coverage if useful images exist:
+Expected screenshot coverage depends on the source material. If useful images exist, check for images covering:
 
-1. Existing Glue/S3 pipeline overview
-2. Redshift Serverless setup/configuration screen
-3. Capacity/RPU configuration
-4. IAM role/default role state
-5. Redshift workgroup available state
-6. Query Editor v2 connection screen
-7. Successful Redshift test query
-8. CREATE EXTERNAL SCHEMA success
-9. External schema/table verification
-10. The mistaken “Load data” flow, if there is a troubleshooting article
+1. Existing context or starting state
+2. Main setup or configuration screen
+3. Important permission, access, credential, path, or capacity setting
+4. Successful ready/available/connected state
+5. First successful command, query, script, or UI action
+6. Main workflow output
+7. Verification result
+8. Important warning or error state
+9. A wrong path or misleading flow, if it has troubleshooting value
+10. Cleanup or final confirmation, if relevant
 
-Do not force all 10 if the raw export does not contain useful images for them, but check them carefully.
+Do not force all categories if the raw export does not contain useful images for them, but check them carefully.
 
 ## Technical Content That Should Be Preserved
 
 The final workshop should preserve detailed explanations for concepts that appeared in the raw conversation, including when relevant:
 
-* why Redshift Serverless is used
-* difference between namespace and workgroup
-* what RPU/base capacity means
-* why low RPU is better for hand-on cost control
-* why IAM role matters
-* why Query Editor v2 uses federated user connection
-* why “Load data” is not the right flow for Redshift Spectrum
-* difference between loading data into native Redshift tables and querying external data
-* how Glue Data Catalog is used by Redshift Spectrum
-* why creating an external schema is needed
-* how to verify external schemas and external tables
-* what to do when external schema exists but no table appears
-* cost/free trial notes if discussed in the raw conversation
+- why a tool, service, architecture, or approach is used
+- differences between similar concepts that affected decisions
+- what each important setting means
+- why lower-cost, safer, or smaller-scope settings are preferable for hands-on workshops
+- why permissions, roles, credentials, or access boundaries matter
+- why a specific connection or authentication method is used
+- why a misleading UI flow, command, import path, or setup path is not correct
+- difference between similar workflows, such as loading data versus querying external data, local versus remote execution, draft versus published output, or temporary versus production resources
+- how external metadata, configuration, catalog, registry, or project state is used
+- why creating an intermediate schema, config, mapping, or adapter is needed
+- how to verify intermediate and final states
+- what to do when expected resources, tables, files, routes, records, or outputs do not appear
+- cost, quota, security, cleanup, rollback, and operational notes if discussed
 
 Do not drop these explanations just to make the content shorter.
 
-## SQL Formatting Rules
+## Code, Command, and SQL Formatting Rules
 
-All SQL commands must be formatted in fenced code blocks.
+All commands, SQL, code, scripts, and configuration snippets must be formatted in fenced code blocks with an appropriate language tag when possible.
 
-Example:
+Examples:
 
 ```sql
-
 SELECT current_database();
-
 ```
 
-For Redshift Spectrum external schema creation, preserve the correct statement from the conversation when available.
-
-Example:
-
-```sql
-
-CREATEEXTERNALSCHEMAIFNOTEXISTS taxi_raw
-
-FROMDATACATALOG
-
-DATABASE'craw_data_catalog'
-
-IAM_ROLE default
-
-REGION 'us-east-2';
-
+```bash
+npm run build
 ```
 
-If the raw conversation later uses an explicit IAM role ARN, preserve it where appropriate.
+```yaml
+title: Example
+weight: 10
+```
 
-Do not merge multiple SQL statements into unreadable one-line blocks.
+Preserve the exact statement from the conversation when available.
+
+Do not merge multiple statements into unreadable one-line blocks.
+
+If the raw conversation contains malformed spacing or syntax that was later corrected, document the corrected version in the tutorial and mention the mistake only if it has troubleshooting value.
 
 ## Expected Output
 
-Create or update Hugo content files under:
-
-@content/Workshop/
+Create or update Hugo content files under the resolved `OUTPUT_ARTICLE_DIR` or `OUTPUT_CONTENT_DIR`, depending on the user's request.
 
 The final result should include:
 
-1. Vietnamese article(s)
-2. English article(s)
+1. Primary-language article(s)
+2. Secondary-language article(s), when requested or required by repository convention
 3. Proper Hugo front matter
 4. Clean Markdown content
-5. Selected screenshots copied into `static/images/...`
-6. Correct image references
+5. Selected screenshots copied into `IMAGE_OUTPUT_DIR`
+6. Correct image references using `PUBLIC_IMAGE_PREFIX`
 7. Meaningful image filenames
 8. Meaningful image alt text
-9. SQL commands formatted correctly
+9. Commands, SQL, code, and configuration formatted correctly
 10. No raw ChatGPT transcript formatting
 11. No unnecessary screenshots
 12. No content written into `public/`
 13. No forced single-article compression
 14. Multi-page structure when it preserves detail better
-15. No published Markdown image links pointing to `raw/`
+15. No published Markdown image links pointing to `RAW_EXPORT_DIR`
 
 ## Final Validation Checklist
 
 Before completing the task, verify:
 
-* The output is no longer a chat transcript.
-* The workflow is reproducible by a colleague.
-* The article structure preserves technical detail.
-* The content is not compressed into one article unless that is truly the best structure.
-* The screenshots are selected intentionally.
-* Every inserted image has a clear instructional purpose.
-* Every inserted image file exists under `static/images/...`.
-* Every Markdown image path uses a valid root-relative path such as `/images/...`.
-* No Markdown image links point to `raw/`.
-* No duplicate or low-value screenshots are inserted.
-* The SQL commands are complete and readable.
-* The content explains why certain actions are taken.
-* The content warns against wrong paths discovered during the chat, such as using “Load data” when the goal is Redshift Spectrum external querying.
-* Vietnamese content is completed before English translation.
-* English content matches the Vietnamese content.
-* No files under `public/` are edited.
-* The final Hugo structure follows the repository convention.
-* The final result prioritizes learning quality over fewer files.
+- The output is no longer a chat transcript.
+- The workflow is reproducible by the target reader.
+- The article structure preserves technical detail.
+- The content is not compressed into one article unless that is truly the best structure.
+- The screenshots are selected intentionally.
+- Every inserted image has a clear instructional purpose.
+- Every inserted image file exists under `IMAGE_OUTPUT_DIR`.
+- Every Markdown image path uses a valid root-relative path derived from `PUBLIC_IMAGE_PREFIX`.
+- No Markdown image links point to `RAW_EXPORT_DIR`.
+- No duplicate or low-value screenshots are inserted.
+- Commands, SQL, code, and configuration snippets are complete and readable.
+- The content explains why important actions are taken.
+- The content warns against wrong paths discovered during the chat when those wrong paths have instructional value.
+- Primary-language content is completed before secondary-language translation.
+- Secondary-language content matches the primary-language content when bilingual output is produced.
+- No files under `public/` are edited.
+- The final Hugo structure follows the repository convention.
+- The final result prioritizes learning quality over fewer files.
 
 ## Final Report Requirement
 
@@ -654,25 +614,15 @@ At the end, report:
 1. Which articles were created or updated.
 2. Which images were selected.
 3. Which raw asset each selected image came from.
-4. Where each selected image was copied under `static/images/...`.
+4. Where each selected image was copied under `IMAGE_OUTPUT_DIR`.
 5. Which article/section each image was inserted into.
 6. Which screenshots were intentionally skipped as duplicates, pre-action screenshots, or low-value images.
 7. Confirmation that all Markdown image paths resolve to existing files.
 
-## Final Task
+## Example Reference
 
-Read:
+Domain-specific examples are illustrative only.
 
-@raw/manhattan-dataways-redshift-spectrum-query-setup/
+If needed, see `references/redshift-spectrum-example.md` for an example of how a Redshift Spectrum conversation can be decomposed into pages, image names, troubleshooting topics, and preserved explanations.
 
-Then create polished Hugo workshop documentation under:
-
-@content/Workshop/
-
-Transform the raw ChatGPT conversation into clean, reproducible workshop documentation with carefully selected screenshots.
-
-Do not force the workflow into one comprehensive article.
-
-Prefer multiple detailed workshop pages when that better preserves the original technical journey, reasoning, screenshots, SQL commands, and troubleshooting value.
-
-Image insertion is not optional. Selected screenshots must be copied into `static/images/...` and inserted near the relevant tutorial steps.
+Do not copy that example's paths, slugs, services, resources, or article structure unless the user's task actually matches that Redshift Spectrum workflow.
